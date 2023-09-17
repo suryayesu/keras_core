@@ -202,6 +202,7 @@ Returns:
 
 
 IMAGENET_STDDEV_RGB = [0.229, 0.224, 0.225]
+IMAGENET_MEAN_RGB = [0.485, 0.456, 0.406] 
 
 
 def EfficientNet(
@@ -321,7 +322,6 @@ def EfficientNet(
     # Build stem
     x = img_input
     x = layers.Rescaling(1.0 / 255.0)(x)
-    x = layers.Normalization(axis=bn_axis)(x)
     if weights == "imagenet":
         # Note that the normaliztion layer uses square value of STDDEV as the
         # variance for the layer: result = (input - mean) / sqrt(var)
@@ -330,9 +330,16 @@ def EfficientNet(
         # original implementation.
         # See https://github.com/tensorflow/tensorflow/issues/49930 for more
         # details
+        x = layers.Normalization(axis=bn_axis,
+                                 mean=IMAGENET_MEAN_RGB,
+                                 variance=IMAGENET_STDDEV_RGB
+        )(x)
         x = layers.Rescaling(
             [1.0 / math.sqrt(stddev) for stddev in IMAGENET_STDDEV_RGB]
         )(x)
+    else:
+        x = layers.Normalization(axis=bn_axis)(x)
+
 
     x = layers.ZeroPadding2D(
         padding=imagenet_utils.correct_pad(x, 3), name="stem_conv_pad"
